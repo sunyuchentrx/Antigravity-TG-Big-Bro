@@ -1,4 +1,4 @@
-# 🤖 TG Anti-Spam Bot
+# 🤖 Antigravity-TG-Big-Bro
 
 > 基于 AI 的 Telegram 群组智能反广告机器人，部署在 Cloudflare Workers 上，零成本运行
 
