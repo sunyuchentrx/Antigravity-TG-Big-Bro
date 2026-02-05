@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TG Bot Webhook 诊断工具</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .step {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .step h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 10px;
+            font-family: 'Consolas', monospace;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            margin-right: 10px;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        .btn.success { background: #10b981; }
+        .btn.success:hover { background: #059669; }
+        .btn.danger { background: #ef4444; }
+        .btn.danger:hover { background: #dc2626; }
+        .result {
+            background: #f0f9ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #0ea5e9;
+            display: none;
+        }
+        .result.show { display: block; }
+        .result.error {
+            background: #fef2f2;
+            border-left-color: #ef4444;
+        }
+        .result.success {
+            background: #f0fdf4;
+            border-left-color: #10b981;
+        }
+        pre {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 13px;
+            margin-top: 10px;
+        }
+        .code {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Consolas', monospace;
+            font-size: 13px;
+        }
+        .warning {
+            background: #fef3c7;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+            margin-top: 15px;
+        }
+        .loading {
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 TG Bot Webhook 诊断工具</h1>
+        <p class="subtitle">快速检查和修复机器人Webhook配置</p>
+
+        <!-- 步骤1: 输入配置 -->
+        <div class="step">
+            <h3>📝 步骤 1: 输入你的配置</h3>
+            <input type="text" id="botToken" placeholder="输入 BOT_TOKEN (例: 1234567890:AAHdqT...)">
+            <input type="text" id="workerUrl" placeholder="输入 Worker URL (例: https://your-bot.workers.dev)">
+        </div>
+
+        <!-- 步骤2: 检查当前状态 -->
+        <div class="step">
+            <h3>🔍 步骤 2: 检查当前 Webhook 状态</h3>
+            <button class="btn" onclick="checkWebhook()">检查 Webhook</button>
+            <div id="checkResult" class="result"></div>
+        </div>
+
+        <!-- 步骤3: 设置Webhook -->
+        <div class="step">
+            <h3>⚙️ 步骤 3: 设置 Webhook</h3>
+            <button class="btn success" onclick="setWebhook()">设置 Webhook</button>
+            <button class="btn danger" onclick="deleteWebhook()">删除 Webhook</button>
+            <div id="setResult" class="result"></div>
+        </div>
+
+        <!-- 步骤4: 发送测试消息 -->
+        <div class="step">
+            <h3>✅ 步骤 4: 测试</h3>
+            <button class="btn" onclick="sendTestRequest()">发送测试请求到 Worker</button>
+            <div id="testResult" class="result"></div>
+            <div class="warning">
+                <strong>⚠️ 测试检查清单：</strong>
+                <ul style="margin-top: 10px; padding-left: 20px;">
+                    <li>机器人已添加到群组</li>
+                    <li>机器人是群组管理员（需要删除消息和封禁权限）</li>
+                    <li>群组已执行 <span class="code">/addgroup</span> 命令激活</li>
+                    <li>环境变量已正确配置（ADMIN_IDS, AI_API_URL等）</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- 步骤5: 数据库检查 -->
+        <div class="step">
+            <h3>💾 步骤 5: 获取你的ID信息</h3>
+            <p style="color: #666; margin-bottom: 15px;">给机器人发送 <span class="code">/id</span> 命令获取你的用户ID和群组ID</p>
+            <button class="btn" onclick="getUpdates()">获取最近的消息（查看ID）</button>
+            <div id="updatesResult" class="result"></div>
+        </div>
+    </div>
+
+    <script>
+        function getConfig() {
+            let botToken = document.getElementById('botToken').value.trim();
+            const workerUrl = document.getElementById('workerUrl').value.trim();
+
+            if (!botToken) {
+                alert('请输入 BOT_TOKEN');
+                return null;
+            }
+
+            // 自动去掉 "bot" 前缀
+            if (botToken.toLowerCase().startsWith('bot')) {
+                botToken = botToken.substring(3);
+                document.getElementById('botToken').value = botToken;
+            }
+
+            return { botToken, workerUrl };
+        }
+
+        async function checkWebhook() {
+            const config = getConfig();
+            if (!config) return;
+
+            const resultDiv = document.getElementById('checkResult');
+            resultDiv.innerHTML = '检查中...<span class="loading"></span>';
+            resultDiv.className = 'result show';
+
+            try {
+                const response = await fetch(`https://api.telegram.org/bot${config.botToken}/getWebhookInfo`);
+                const data = await response.json();
+
+                if (data.ok) {
+                    const info = data.result;
+                    let html = '<strong>📊 Webhook 状态：</strong><br><br>';
+
+                    if (info.url) {
+                        html += `✅ 已设置 Webhook<br>`;
+                        html += `<strong>URL:</strong> <span class="code">${info.url}</span><br>`;
+                        html += `<strong>待处理消息:</strong> ${info.pending_update_count || 0}<br>`;
+
+                        if (info.last_error_date) {
+                            html += `<br>❌ <strong>最后错误:</strong><br>`;
+                            html += `时间: ${new Date(info.last_error_date * 1000).toLocaleString()}<br>`;
+                            html += `错误: ${info.last_error_message}<br>`;
+                            resultDiv.className = 'result show error';
+                        } else {
+                            html += `<br>✅ 无错误记录`;
+                            resultDiv.className = 'result show success';
+                        }
+
+                        // 检查URL是否匹配
+                        if (config.workerUrl && info.url !== config.workerUrl) {
+                            html += `<br><br>⚠️ <strong>警告:</strong> Webhook URL 与输入的 Worker URL 不匹配！`;
+                            resultDiv.className = 'result show error';
+                        }
+                    } else {
+                        html += `❌ 未设置 Webhook<br>`;
+                        html += `<strong>原因:</strong> 这就是为什么收不到消息！`;
+                        resultDiv.className = 'result show error';
+                    }
+
+                    resultDiv.innerHTML = html + '<pre>' + JSON.stringify(info, null, 2) + '</pre>';
+                } else {
+                    resultDiv.className = 'result show error';
+                    resultDiv.innerHTML = `❌ 错误: ${data.description}`;
+                }
+            } catch (e) {
+                resultDiv.className = 'result show error';
+                resultDiv.innerHTML = `❌ 请求失败: ${e.message}`;
+            }
+        }
+
+        async function setWebhook() {
+            const config = getConfig();
+            if (!config) return;
+
+            if (!config.workerUrl) {
+                alert('请输入 Worker URL');
+                return;
+            }
+
+            const resultDiv = document.getElementById('setResult');
+            resultDiv.innerHTML = '设置中...<span class="loading"></span>';
+            resultDiv.className = 'result show';
+
+            try {
+                const url = `https://api.telegram.org/bot${config.botToken}/setWebhook?url=${encodeURIComponent(config.workerUrl)}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.ok) {
+                    resultDiv.className = 'result show success';
+                    resultDiv.innerHTML = `✅ Webhook 设置成功！<br><br><strong>URL:</strong> <span class="code">${config.workerUrl}</span><br><br>现在可以在群组发消息测试了！`;
+                } else {
+                    resultDiv.className = 'result show error';
+                    resultDiv.innerHTML = `❌ 设置失败: ${data.description}`;
+                }
+            } catch (e) {
+                resultDiv.className = 'result show error';
+                resultDiv.innerHTML = `❌ 请求失败: ${e.message}`;
+            }
+        }
+
+        async function deleteWebhook() {
+            const config = getConfig();
+            if (!config) return;
+
+            if (!confirm('确定要删除 Webhook 吗？')) return;
+
+            const resultDiv = document.getElementById('setResult');
+            resultDiv.innerHTML = '删除中...<span class="loading"></span>';
+            resultDiv.className = 'result show';
+
+            try {
+                const response = await fetch(`https://api.telegram.org/bot${config.botToken}/deleteWebhook`);
+                const data = await response.json();
+
+                if (data.ok) {
+                    resultDiv.className = 'result show success';
+                    resultDiv.innerHTML = '✅ Webhook 已删除';
+                } else {
+                    resultDiv.className = 'result show error';
+                    resultDiv.innerHTML = `❌ 删除失败: ${data.description}`;
+                }
+            } catch (e) {
+                resultDiv.className = 'result show error';
+                resultDiv.innerHTML = `❌ 请求失败: ${e.message}`;
+            }
+        }
+
+        async function sendTestRequest() {
+            const config = getConfig();
+            if (!config || !config.workerUrl) {
+                alert('请输入 Worker URL');
+                return;
+            }
+
+            const resultDiv = document.getElementById('testResult');
+            resultDiv.innerHTML = '发送测试请求...<span class="loading"></span>';
+            resultDiv.className = 'result show';
+
+            try {
+                const testPayload = {
+                    message: {
+                        message_id: 1,
+                        from: { id: 123456789, first_name: "Test User" },
+                        chat: { id: -1001234567890, type: "supergroup" },
+                        text: "Test message"
+                    }
+                };
+
+                const response = await fetch(config.workerUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testPayload)
+                });
+
+                const text = await response.text();
+
+                if (response.ok) {
+                    resultDiv.className = 'result show success';
+                    resultDiv.innerHTML = `✅ Worker 响应正常！<br><br><strong>状态码:</strong> ${response.status}<br><strong>响应:</strong> ${text}<br><br>现在打开 <a href="${config.workerUrl}" target="_blank">${config.workerUrl}</a> 查看日志！`;
+                } else {
+                    resultDiv.className = 'result show error';
+                    resultDiv.innerHTML = `❌ Worker 响应错误<br><br><strong>状态码:</strong> ${response.status}<br><strong>响应:</strong> ${text}`;
+                }
+            } catch (e) {
+                resultDiv.className = 'result show error';
+                resultDiv.innerHTML = `❌ 无法连接到 Worker: ${e.message}`;
+            }
+        }
+
+        async function getUpdates() {
+            const config = getConfig();
+            if (!config) return;
+
+            const resultDiv = document.getElementById('updatesResult');
+            resultDiv.innerHTML = '获取最近消息...<span class="loading"></span>';
+            resultDiv.className = 'result show';
+
+            try {
+                const response = await fetch(`https://api.telegram.org/bot${config.botToken}/getUpdates?limit=5`);
+                const data = await response.json();
+
+                if (data.ok) {
+                    if (data.result.length === 0) {
+                        resultDiv.className = 'result show';
+                        resultDiv.innerHTML = '❌ 没有最近的消息<br><br>请给机器人发送 <span class="code">/id</span> 命令';
+                    } else {
+                        let html = '<strong>📨 最近的消息：</strong><br><br>';
+                        data.result.forEach((update, i) => {
+                            const msg = update.message || update.edited_message;
+                            if (msg) {
+                                html += `<strong>消息 ${i + 1}:</strong><br>`;
+                                html += `用户ID: <span class="code">${msg.from.id}</span><br>`;
+                                html += `用户名: ${msg.from.first_name}<br>`;
+                                html += `群组ID: <span class="code">${msg.chat.id}</span><br>`;
+                                html += `消息: ${msg.text || '(非文本)'}<br><br>`;
+                            }
+                        });
+                        resultDiv.className = 'result show success';
+                        resultDiv.innerHTML = html + '<pre>' + JSON.stringify(data.result, null, 2) + '</pre>';
+                    }
+                } else {
+                    resultDiv.className = 'result show error';
+                    resultDiv.innerHTML = `❌ 错误: ${data.description}`;
+                }
+            } catch (e) {
+                resultDiv.className = 'result show error';
+                resultDiv.innerHTML = `❌ 请求失败: ${e.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
