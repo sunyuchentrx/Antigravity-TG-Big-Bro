@@ -55,7 +55,7 @@
 
 ```bash
 # 1. 克隆项目
-git clone https://github.com/sunyuchentrx/tg-anti-spam-bot.git
+git clone https://github.com/sunyuchentrx/Antigravity-TG-Big-Bro.git
 cd tg-anti-spam-bot
 
 # 2. 登录 Cloudflare
